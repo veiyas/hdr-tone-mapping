@@ -30,7 +30,10 @@ for j=1:length(pixelValues)
     ZBlue(:,j)  = datasample(tempB(:), numPixelSamples);
 end
 
+% NOTE Maybe this creates off by 1 when used in gSolve and/or
+% constructRadianceMap, but also maybe not; will investigate
 w = arrayfun(@weightingFunction, 0:255);
+
 lambda = 500; % Not sure what values are reasonable for this
 % This feels kinda weird, comments in gSolve for B dont match code?
 logExp = repmat(logExposureTimes, numPixelSamples)';
@@ -54,23 +57,10 @@ hold off
 
 % This function takes ages atm, I'll have to optimize it
 [logIrradianceR] = constructRadianceMap(R, w, logExposureTimes, gRed);
+[logIrradianceG] = constructRadianceMap(G, w, logExposureTimes, gGreen);
+[logIrradianceB] = constructRadianceMap(B, w, logExposureTimes, gBlue);
 
-%%
-imagesc(logIrradianceR);
-colorbar
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+%% Visualizing the radiance maps with color scale
+subplot(221); imagesc(logIrradianceR); colorbar; title("R")
+subplot(222); imagesc(logIrradianceG); colorbar; title("G")
+subplot(223); imagesc(logIrradianceB); colorbar; title("B")

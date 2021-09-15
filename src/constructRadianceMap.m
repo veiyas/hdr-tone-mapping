@@ -15,12 +15,11 @@ den = zeros(numPixels, 1);
 
 % It is very possible that this could be done in a smart matlab way
 % but this will do (at least for now)
-for i=1:numPixels
-    wi = arrayfun(@(Zij) w(Zij + 1), Z(i, :));
-    gi = arrayfun(@(Zij) g(Zij + 1), Z(i, :));
-    
-    num(i) = sum(wi .* (gi - logDt'));
-    den(i) = sum(wi);
+for i=1:numPixels   
+    for j=1:numImages
+        num(i) = num(i) + (w(Z(i,j) + 1) .* (g(Z(i,j) + 1) - logDt(j)));
+        den(i) = den(i) + w(Z(i,j) + 1);
+    end
 end
 
 lnE = num ./ den;
