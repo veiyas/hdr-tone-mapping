@@ -55,12 +55,12 @@ hold off
 %% Constructing the radiance map
 % A different weight function can be used... see (10.10) in computer vision
 
-% This function takes ages atm, I'll have to optimize it
 [logIrradianceR] = constructRadianceMap(R, w, logExposureTimes, gRed);
 [logIrradianceG] = constructRadianceMap(G, w, logExposureTimes, gGreen);
 [logIrradianceB] = constructRadianceMap(B, w, logExposureTimes, gBlue);
 
 %% Visualizing the radiance maps with color scale
-subplot(221); imagesc(logIrradianceR); colorbar; title("R")
-subplot(222); imagesc(logIrradianceG); colorbar; title("G")
-subplot(223); imagesc(logIrradianceB); colorbar; title("B")
+colormap jet
+subplot(221); imagesc(logIrradianceR, [-1.5, 7]); colorbar; title("R")
+subplot(222); imagesc(logIrradianceG, [-1.5, 7]); colorbar; title("G")
+subplot(223); imagesc(logIrradianceB, [-1.5, 7]); colorbar; title("B")
