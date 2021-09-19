@@ -4,7 +4,10 @@ clear
 format compact
 
 %% Get images
-[pixelValues, exposureTimes] = getImageSequence("JPEGS_FROM_LISAM");
+sequenceName = "JPEGS_FROM_LISAM";
+% sequenceName = "MEMORIAL";
+
+[pixelValues, exposureTimes] = getImageSequence(sequenceName);
 [R, G, B] = extractRGB(pixelValues);
 disp(strcat("Number of images: ", num2str(length(pixelValues))));
 montage(pixelValues);
@@ -14,27 +17,30 @@ logExposureTimes = log(cell2mat(exposureTimes))';
 
 % Since using all pixels would produce collossal matrices later, the
 % images has to be sampled in some way.
-numPixelSamples = 150;
+numPixels = size(pixelValues{1}, 1) * size(pixelValues{1}, 2);
+numPixelSamples = 500;
 ZRed   = zeros(numPixelSamples, length(logExposureTimes));
 ZGreen = zeros(numPixelSamples, length(logExposureTimes));
 ZBlue  = zeros(numPixelSamples, length(logExposureTimes));
 
-for j=1:length(pixelValues)
-    tempR = R(:,:,j);
-    tempG = G(:,:,j);
-    tempB = B(:,:,j);
-    % Just choosing random samples is probably not optimal
-    % So thats something we could improve
-    ZRed(:,j)   = datasample(tempR(:), numPixelSamples);
-    ZGreen(:,j) = datasample(tempG(:), numPixelSamples);
-    ZBlue(:,j)  = datasample(tempB(:), numPixelSamples);
+step = numPixels / numPixelSamples;
+sampleIndices = floor((1:step:numPixels));
+
+for j=1:length(exposureTimes)
+    tempR = reshape(R(:,:,j), numPixels, 1);
+    tempG = reshape(G(:,:,j), numPixels, 1);
+    tempB = reshape(B(:,:,j), numPixels, 1);
+    
+    ZRed(:,j)   = tempR(sampleIndices);
+    ZGreen(:,j) = tempG(sampleIndices);
+    ZBlue(:,j)  = tempB(sampleIndices);
 end
 
 % NOTE Maybe this creates off by 1 when used in gSolve and/or
 % constructRadianceMap, but also maybe not; will investigate
 w = arrayfun(@weightingFunction, 0:255);
 
-lambda = 500; % Not sure what values are reasonable for this
+lambda = 150;
 % This feels kinda weird, comments in gSolve for B dont match code?
 logExp = repmat(logExposureTimes, numPixelSamples)';
 
@@ -61,6 +67,6 @@ hold off
 
 %% Visualizing the radiance maps with color scale
 colormap jet
-subplot(221); imagesc(logIrradianceR, [-1.5, 7]); colorbar; title("R")
-subplot(222); imagesc(logIrradianceG, [-1.5, 7]); colorbar; title("G")
-subplot(223); imagesc(logIrradianceB, [-1.5, 7]); colorbar; title("B")
+subplot(221); imagesc(logIrradianceR); colorbar; title("R")
+subplot(222); imagesc(logIrradianceG); colorbar; title("G")
+subplot(223); imagesc(logIrradianceB); colorbar; title("B")
