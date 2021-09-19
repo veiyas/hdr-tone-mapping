@@ -40,13 +40,13 @@ end
 % constructRadianceMap, but also maybe not; will investigate
 w = arrayfun(@weightingFunction, 0:255);
 
-lambda = 150;
+lambda = 100;
 % This feels kinda weird, comments in gSolve for B dont match code?
-logExp = repmat(logExposureTimes, numPixelSamples)';
+logExp = repmat(logExposureTimes, 1, numPixelSamples)';
 
-[gRed,~]   = gSolve(ZRed,   logExp, lambda, w);
-[gGreen,~] = gSolve(ZGreen, logExp, lambda, w);
-[gBlue,~]  = gSolve(ZBlue,  logExp, lambda, w);
+[gRed, lERed] = gSolve(ZRed, logExp, lambda, w);
+[gGreen, lEGreen] = gSolve(ZGreen, logExp, lambda, w);
+[gBlue, lEBlue] = gSolve(ZBlue, logExp, lambda, w);
 
 %% Plot the recovered camera response function
 plot(gRed, 0:255, 'r')
@@ -57,6 +57,14 @@ hold on
 plot(gGreen, 0:255, 'g')
 plot(gBlue, 0:255, 'b')
 hold off
+
+%% Plot camera response with the samples
+subplot(221); plotResponseWithSamples(lERed, logExp, ZRed, gRed);
+    title('R');
+subplot(222); plotResponseWithSamples(lEGreen, logExp, ZGreen, gGreen);
+    title('G');
+subplot(223); plotResponseWithSamples(lEBlue, logExp, ZBlue, gBlue);
+    title('B');
 
 %% Constructing the radiance map
 % A different weight function can be used... see (10.10) in computer vision
