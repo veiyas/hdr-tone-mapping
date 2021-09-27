@@ -1,4 +1,4 @@
-function [logIrradiance] = constructRadianceMap(images, w, logDt, g)
+function [irradiance] = constructRadianceMap(images, w, logDt, g)
 % Takes one color channel only
 % images is the images with the third dimension denoting which image it is
 
@@ -22,8 +22,10 @@ for i=1:numPixels
     end
 end
 
-lnE = num ./ den;
-logIrradiance = reshape(lnE, [width, height]);
+% lnE = num ./ den;
+E = exp(num ./ den);
+
+irradiance = reshape(E, [width, height]);
 
 end
 
