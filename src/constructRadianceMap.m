@@ -22,7 +22,7 @@ for i=1:numPixels
     end
 end
 
-% lnE = num ./ den;
+% E = num ./ den;
 E = exp(num ./ den);
 
 irradiance = reshape(E, [width, height]);
