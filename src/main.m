@@ -139,7 +139,7 @@ logLum=log10(luminance);
 deltaB=(max(max(logLum)) - min(min(logLum)) )/100;
 
 displayMin=100; % ?
-displayMax=1000000; % ?
+displayMax=100000000000000000000000000; % ?
 logdmin=log10(displayMin);
 logdmax=log10(displayMax);
 bincount=100;
@@ -155,11 +155,15 @@ logDisplay=zeros(size(luminance));
    % end
 %end
 
-fb=imhist(luminance, bincount);
+fb=imhist(logLum, bincount);
 
 for i=1:1:bincount
     if fb(i) > (T*deltaB) / (logdmax - logdmin)
             fb(i) = (T*deltaB) / (logdmax - logdmin);
+    end
+    
+    if fb(i) < displayMin
+            fb(i)=T;
     end
 end
 
@@ -168,15 +172,16 @@ globalToneMappedImage=histeq(luminance,fb);
 %imshow(luminance);
 %imshow(lumDis);
 %imshow(logDisplay);
-imshow(globalToneMappedImage);
+%imshow(globalToneMappedImage);
 
-image(:,:,1) = globalToneMappedImage .* rScaled; % Re-apply colors
+image(:,:,1) = globalToneMappedImage .* rScaled.*0.7; % blev för rött så ändrade skalningen
 image(:,:,2) = globalToneMappedImage .* gScaled; % Re-apply colors
 image(:,:,3) = globalToneMappedImage .* bScaled; % Re-apply colors
 imshow(image);
 
-imhist(luminance,bincount)
+%imhist(luminance,bincount)
 imhist(globalToneMappedImage,bincount)
 %imhist(logLum, bincount);
 %imhist(logDisplay,bincount);
+
 
