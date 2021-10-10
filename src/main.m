@@ -120,3 +120,58 @@ title('Bilateral, Dorsey')
 subplot(1,2,2);
 imshow(trueToneMapped);
 title('MATLAB Tonemap')
+%%
+
+%global tonemapping
+%osäker på om det behövs samplas igen
+subplot(1,1,1);
+hsv = rgb2hsv(radmap); %transforms the image values
+luminance=intensityMap;
+chrominance=hsv(:,:,2); %chrominance = saturation channel
+[rows, cols]=size(radmap(:,:,1));
+T=rows*cols; %total amount of pixels
+logLum=log10(luminance);
+deltaB=(max(max(logLum)) - min(min(logLum)) )/100;
+
+displayMin=100; % ?
+displayMax=1000000; % ?
+logdmin=log10(displayMin);
+logdmax=log10(displayMax);
+bincount=100;
+h=imhist(luminance,bincount) / T;
+logDisplay=zeros(size(luminance));
+
+%cumsum = P(b)
+%for k=1:5:rows
+   % for m=1:5:cols
+      %  logDisplay(k,m)=logdmin + (logdmax - logdmin).*cumsum(logLum(k,m)/T);
+      %  lumDis=logDisplay./luminance;
+      %  %lumDisDerivative=diff(logDisplay, luminance);
+   % end
+%end
+
+fb=imhist(luminance, bincount);
+
+for i=1:1:bincount
+    if fb(i) > (T*deltaB) / (logdmax - logdmin)
+            fb(i) = (T*deltaB) / (logdmax - logdmin);
+    end
+end
+
+globalToneMappedImage=histeq(luminance,fb);
+%globalToneMappedImage=luminance.*fb;
+%imshow(luminance);
+%imshow(lumDis);
+%imshow(logDisplay);
+imshow(globalToneMappedImage);
+
+image(:,:,1) = globalToneMappedImage .* rScaled; % Re-apply colors
+image(:,:,2) = globalToneMappedImage .* gScaled; % Re-apply colors
+image(:,:,3) = globalToneMappedImage .* bScaled; % Re-apply colors
+imshow(image);
+
+imhist(luminance,bincount)
+imhist(globalToneMappedImage,bincount)
+%imhist(logLum, bincount);
+%imhist(logDisplay,bincount);
+
