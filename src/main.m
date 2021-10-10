@@ -6,6 +6,11 @@ format compact
 %% Get images
 % sequenceName = "JPEGS_FROM_LISAM";
 sequenceName = "MEMORIAL";
+% Images below come from the same dataset and all have some weird
+% horizontal lines artifacts that are primarily visible in darger regions
+% sequenceName = "PARKING";
+% sequenceName = "CONSTRUCTION";
+% sequenceName = "COUNTER";
 
 [pixelValues, exposureTimes] = getImageSequence(sequenceName);
 [R, G, B] = extractRGB(pixelValues);
