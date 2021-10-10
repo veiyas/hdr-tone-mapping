@@ -37,6 +37,26 @@ elseif strcmp(sequenceId, "MEMORIAL")
         pixelValues{i} = image(48:(768-24), 4:(512-16), :);
         exposureTimes{i} = 1 / str2double(files(i,2));
     end
+else
+    if strcmp(sequenceId, "PARKING")
+        folder = "parking-garage";
+    elseif strcmp(sequenceId, "COUNTER")
+        folder = "counter";
+    elseif strcmp(sequenceId, "CONSTRUCTION")
+        folder = "construction";
+    else
+        error("No such dataset");
+    end
+    
+    exposureTimes = {2, 1.5, 1, 2^(-1), 2^(-2), 2^(-3), 2^(-4), 2^(-5), ...
+        2^(-6), 2^-(7)}; % from the dataset paper
+    
+    for i = 1:10
+        name = strcat(dataDirectory, "/ebsnet-samples/", folder, "/im", ...
+            num2str(i), ".png");
+        pixelValues{i} = imread(name);
+    end
+    
 end
 
 end
