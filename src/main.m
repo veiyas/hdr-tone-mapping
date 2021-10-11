@@ -231,6 +231,9 @@ imhist(globalToneMappedImage,bincount)
 %imhist(logLum, bincount);
 %imhist(logDisplay,bincount);
 
+%% Another global one
+imshow(reinhardGlobal(irradianceR, irradianceG, irradianceB, 0.38, 0.7));
+
 %%
 
 subplot(2,2,1);
