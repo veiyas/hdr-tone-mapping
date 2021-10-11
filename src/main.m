@@ -16,7 +16,7 @@ sequenceName = "MEMORIAL";
 [R, G, B] = extractRGB(pixelValues);
 
 disp(strcat("Number of images: ", num2str(length(pixelValues))));
-montage(pixelValues);
+% montage(pixelValues);
 
 %% Not sure if this is correct yet
 logExposureTimes = log(cell2mat(exposureTimes))';
@@ -85,19 +85,20 @@ subplot(221); imagesc(irradianceR); colorbar; title("R")
 subplot(222); imagesc(irradianceG); colorbar; title("G")
 subplot(223); imagesc(irradianceB); colorbar; title("B")
 
-%% Tonemap, Durand & Dorsey
+%% Local tonemap, Durand
 % Potential luminance map
 % luminanceMap = log10(0.2125 * hdrIm(:,:,1) + 0.7152 * hdrIm(:,:,2) + 0.0722 * hdrIm(:,:,3));
 
-radmap = (cat(3, irradianceR, irradianceG, irradianceB));
-% radmap = im2double(imadjust(radmap, [0 1], []));
-trueToneMapped = tonemap(radmap);
+radMap = (cat(3, irradianceR, irradianceG, irradianceB));
+trueToneMapped = tonemap(radMap);
+
+%%
 
 contrast = 10; % Since wse want a contrast of 1:100 that LDR-images can handlec
-intensityMap = (radmap(:,:,1) * 20 + radmap(:,:,2) * 40 + radmap(:,:,3) * 1) / 61; % Intensity map
-rScaled = radmap(:,:,1) ./ intensityMap;
-gScaled = radmap(:,:,2) ./ intensityMap;
-bScaled = radmap(:,:,3) ./ intensityMap;
+intensityMap = (radMap(:,:,1) * 20 + radMap(:,:,2) * 40 + radMap(:,:,3) * 1) / 61; % Intensity map
+rScaled = radMap(:,:,1) ./ intensityMap;
+gScaled = radMap(:,:,2) ./ intensityMap;
+bScaled = radMap(:,:,3) ./ intensityMap;
 logIntensity = log10(intensityMap);
 
 baseLayer = imbilatfilt(logIntensity, 0.4, 0.02*size(logIntensity, 2)); % This is too slow for larger images
@@ -117,23 +118,68 @@ image(:,:,3) = outputMap .* bScaled; % Re-apply colors
 %maxVal = max(max(max(image)));
 %image = image / maxVal;
 scale = 1.0 / (10 ^ (maxBaseVal * gamma));
-image = min(1.0, max(0.0, power(image*scale, 1.0/2.2)));
+imageDurand = min(1.0, max(0.0, power(image*scale, 1.0/2.2)));
 
-subplot(1,2,1);
-imshow(image);
-title('Bilateral, Dorsey')
-subplot(1,2,2);
-imshow(trueToneMapped);
-title('MATLAB Tonemap')
-%%
+% subplot(1,2,1);
+% imshow(image);
+% title('Bilateral, Dorsey')
+% subplot(1,2,2);
+% imshow(trueToneMapped);
+% title('MATLAB Tonemap')
 
-%global tonemapping
+%% Local tone map, Drago http://pages.cs.wisc.edu/~lizhang/courses/cs766-2012f/projects/hdr/Drago2003ALM.pdf
+xyz(:,:,1) = 0.412453 .* radMap(:,:,1) + 0.357580 .* radMap(:,:,2) + 0.180423 .* radMap(:,:,3);
+xyz(:,:,2) = 0.212671 .* radMap(:,:,1) + 0.715160 .* radMap(:,:,2) + 0.072169 .* radMap(:,:,3);
+xyz(:,:,3) = 0.019334 .* radMap(:,:,1) + 0.119193 .* radMap(:,:,2) + 0.950227 .* radMap(:,:,3);
+
+% convert to Yxy
+W = sum(xyz,3);
+Yxy(:,:,1) = xyz(:,:,2);     % Y
+Yxy(:,:,2) = xyz(:,:,1) ./ W;	% x
+Yxy(:,:,3) = xyz(:,:,2) ./ W;	% y
+
+% run global operator
+N = numel(Yxy(:,:,1));
+maxLum = max(max(Yxy(:,:,1)));
+
+logSum = sum(log(reshape(Yxy(:,:,1), [1 N] )));
+logAvgLum = logSum / N;
+avgLum = exp(logAvgLum);
+maxLumW = (maxLum / avgLum);
+
+b = 0.85;
+
+% Bias power function
+bT = (Yxy(:,:,1) ./ maxLumW) .^ ( log(b) / log(0.5) );
+
+%replace luminance values
+coeff = (100 * 0.01) / log10(maxLumW + 1);
+Yxy(:,:,1) = Yxy(:,:,1) ./ avgLum;
+Yxy(:,:,1) = ( log(Yxy(:,:,1) + 1) ./ log(2 + bT .* 8) ) .* coeff;
+
+% convert back to RGB
+
+% Yxy to xyz
+newW = Yxy(:,:,1) ./ Yxy(:,:,3);
+xyz(:,:,2) = Yxy(:,:,1);
+xyz(:,:,1) = newW .* Yxy(:,:,2);
+xyz(:,:,3) = newW -xyz(:,:,1) - xyz(:,:,2);
+
+% arbitrary xyz to rgb conversion
+image(:,:,1) = 3.240479 .* xyz(:,:,1) + -1.537150 .* xyz(:,:,2) + -0.498535 .* xyz(:,:,3);
+image(:,:,2) = -0.969256 .* xyz(:,:,1) + 1.875992 .* xyz(:,:,2) + 0.041556 .* xyz(:,:,3);
+image(:,:,3) = 0.055648 .* xyz(:,:,1) + -0.204043 .* xyz(:,:,2) + 1.057311 .* xyz(:,:,3);
+
+% correct gamma
+imageDrago = fixGamma(image, 2.7);
+
+%% global tonemapping
 %osäker på om det behövs samplas igen
-subplot(1,1,1);
-hsv = rgb2hsv(radmap); %transforms the image values
+% subplot(1,1,1);
+hsv = rgb2hsv(radMap); %transforms the image values
 luminance=intensityMap;
 chrominance=hsv(:,:,2); %chrominance = saturation channel
-[rows, cols]=size(radmap(:,:,1));
+[rows, cols]=size(radMap(:,:,1));
 T=rows*cols; %total amount of pixels
 logLum=log10(luminance);
 deltaB=(max(max(logLum)) - min(min(logLum)) )/100;
@@ -174,14 +220,23 @@ globalToneMappedImage=histeq(luminance,fb);
 %imshow(logDisplay);
 %imshow(globalToneMappedImage);
 
-image(:,:,1) = globalToneMappedImage .* rScaled.*0.7; % blev för rött så ändrade skalningen
-image(:,:,2) = globalToneMappedImage .* gScaled; % Re-apply colors
-image(:,:,3) = globalToneMappedImage .* bScaled; % Re-apply colors
-imshow(image);
+imageGlobal(:,:,1) = globalToneMappedImage .* rScaled.*0.7; % blev för rött så ändrade skalningen
+imageGlobal(:,:,2) = globalToneMappedImage .* gScaled; % Re-apply colors
+imageGlobal(:,:,3) = globalToneMappedImage .* bScaled; % Re-apply colors
+imshow(imageGlobal);
 
 %imhist(luminance,bincount)
 imhist(globalToneMappedImage,bincount)
 %imhist(logLum, bincount);
 %imhist(logDisplay,bincount);
 
+%%
 
+subplot(2,2,1);
+imshow(trueToneMapped);
+subplot(2,2,2);
+imshow(imageDurand);
+subplot(2,2,3);
+imshow(imageDrago);
+subplot(2,2,4);
+imshow(imageGlobal);
