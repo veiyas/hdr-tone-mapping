@@ -5,12 +5,12 @@ format compact
 
 %% Get images
 % sequenceName = "JPEGS_FROM_LISAM";
-sequenceName = "MEMORIAL";
+% sequenceName = "MEMORIAL";
 % Images below come from the same dataset and all have some weird
 % horizontal lines artifacts that are primarily visible in darger regions
 % sequenceName = "PARKING";
 % sequenceName = "CONSTRUCTION";
-% sequenceName = "COUNTER";
+sequenceName = "COUNTER";
 
 [pixelValues, exposureTimes] = getImageSequence(sequenceName);
 [R, G, B] = extractRGB(pixelValues);
@@ -128,6 +128,7 @@ imageDurand = min(1.0, max(0.0, power(image*scale, 1.0/2.2)));
 % title('MATLAB Tonemap')
 
 %% Local tone map, Drago http://pages.cs.wisc.edu/~lizhang/courses/cs766-2012f/projects/hdr/Drago2003ALM.pdf
+% XYZ-transformation as defined in the paper
 xyz(:,:,1) = 0.412453 .* radMap(:,:,1) + 0.357580 .* radMap(:,:,2) + 0.180423 .* radMap(:,:,3);
 xyz(:,:,2) = 0.212671 .* radMap(:,:,1) + 0.715160 .* radMap(:,:,2) + 0.072169 .* radMap(:,:,3);
 xyz(:,:,3) = 0.019334 .* radMap(:,:,1) + 0.119193 .* radMap(:,:,2) + 0.950227 .* radMap(:,:,3);
@@ -234,9 +235,13 @@ imhist(globalToneMappedImage,bincount)
 
 subplot(2,2,1);
 imshow(trueToneMapped);
+title('MATLAB')
 subplot(2,2,2);
 imshow(imageDurand);
+title('Durand')
 subplot(2,2,3);
 imshow(imageDrago);
+title('Drago')
 subplot(2,2,4);
 imshow(imageGlobal);
+title('Global')
