@@ -232,7 +232,14 @@ imhist(globalToneMappedImage,bincount)
 %imhist(logDisplay,bincount);
 
 %% Another global one
-imshow(reinhardGlobal(irradianceR, irradianceG, irradianceB, 0.38, 0.7));
+a = 0.58;
+saturation = 0.7;
+imshow(reinhardGlobal(irradianceR, irradianceG, irradianceB, a, saturation));
+
+%% And a third global one (very simple)
+gamma = 0.2;
+RGB = gammaToneMapping(irradianceR, irradianceG, irradianceB, gamma);
+imshow(RGB)
 
 %%
 
