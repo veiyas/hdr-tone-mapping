@@ -241,6 +241,13 @@ gamma = 0.2;
 RGB = gammaToneMapping(irradianceR, irradianceG, irradianceB, gamma);
 imshow(RGB)
 
+%% Adaptation of the gamma one to luminance
+gamma = 0.2;
+saturation = 0.4;
+RGB = gammaLuminanceToneMapping(irradianceR, irradianceG, irradianceB, ...
+    gamma, saturation);
+imshow(RGB)
+
 %%
 
 subplot(2,2,1);
