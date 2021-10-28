@@ -85,38 +85,30 @@ subplot(221); imagesc(irradianceR); colorbar; title("R")
 subplot(222); imagesc(irradianceG); colorbar; title("G")
 subplot(223); imagesc(irradianceB); colorbar; title("B")
 
-%% Local tonemap, Durand
-% Potential luminance map
-% luminanceMap = log10(0.2125 * hdrIm(:,:,1) + 0.7152 * hdrIm(:,:,2) + 0.0722 * hdrIm(:,:,3));
-
+%% Tone-mapping
 radMap = (cat(3, irradianceR, irradianceG, irradianceB));
 trueToneMapped = tonemap(radMap);
 
-%%
-
+%% Durand
 contrast = 10; % Since wse want a contrast of 1:100 that LDR-images can handlec
-intensityMap = (radMap(:,:,1) * 20 + radMap(:,:,2) * 40 + radMap(:,:,3) * 1) / 61; % Intensity map
-rScaled = radMap(:,:,1) ./ intensityMap;
-gScaled = radMap(:,:,2) ./ intensityMap;
-bScaled = radMap(:,:,3) ./ intensityMap;
-logIntensity = log10(intensityMap);
+luminanceMap = (radMap(:,:,1) * 20 + radMap(:,:,2) * 40 + radMap(:,:,3) * 1) / 61; % Intensity map
+rScaled = radMap(:,:,1) ./ luminanceMap;
+gScaled = radMap(:,:,2) ./ luminanceMap;
+bScaled = radMap(:,:,3) ./ luminanceMap;
+logLuminance = log10(luminanceMap);
 
-baseLayer = imbilatfilt(logIntensity, 0.4, 0.02*size(logIntensity, 2)); % This is too slow for larger images
+baseLayer = imbilatfilt(logLuminance, 0.4, 0.02*size(logLuminance, 2)); % This is very slow for larger images
 
-detailLayer = logIntensity - baseLayer; % High-pass filtered
+detailLayer = logLuminance - baseLayer; % High-pass filtered
 maxBaseVal = max(baseLayer(:));
 minBaseVal = min(baseLayer(:));
 
 gamma = log10(contrast) / (maxBaseVal - minBaseVal); % To scale base-layer
-%Offset = max(max(lBase)) * Scale;
-%lOmap = lBase * Scale + lDetail - Offset;
 logOutputMap = baseLayer * gamma + detailLayer;
 outputMap = 10 .^ logOutputMap;
 image(:,:,1) = outputMap .* rScaled; % Re-apply colors
 image(:,:,2) = outputMap .* gScaled; % Re-apply colors
 image(:,:,3) = outputMap .* bScaled; % Re-apply colors
-%maxVal = max(max(max(image)));
-%image = image / maxVal;
 scale = 1.0 / (10 ^ (maxBaseVal * gamma));
 imageDurand = min(1.0, max(0.0, power(image*scale, 1.0/2.2)));
 
@@ -127,46 +119,46 @@ imageDurand = min(1.0, max(0.0, power(image*scale, 1.0/2.2)));
 % imshow(trueToneMapped);
 % title('MATLAB Tonemap')
 
-%% Local tone map, Drago http://pages.cs.wisc.edu/~lizhang/courses/cs766-2012f/projects/hdr/Drago2003ALM.pdf
+%% Drago
 % XYZ-transformation as defined in the paper
+% Can't use MATLAB's rgb2xyz, probably related to the color space
+% Rec. 709 used by Drago which is unavailable in rgb2xyz
 xyz(:,:,1) = 0.412453 .* radMap(:,:,1) + 0.357580 .* radMap(:,:,2) + 0.180423 .* radMap(:,:,3);
 xyz(:,:,2) = 0.212671 .* radMap(:,:,1) + 0.715160 .* radMap(:,:,2) + 0.072169 .* radMap(:,:,3);
 xyz(:,:,3) = 0.019334 .* radMap(:,:,1) + 0.119193 .* radMap(:,:,2) + 0.950227 .* radMap(:,:,3);
 
-% convert to Yxy
+% Convert to Yxy/xyY
 W = sum(xyz,3);
-Yxy(:,:,1) = xyz(:,:,2);     % Y
+Yxy(:,:,1) = xyz(:,:,2);        % Y
 Yxy(:,:,2) = xyz(:,:,1) ./ W;	% x
 Yxy(:,:,3) = xyz(:,:,2) ./ W;	% y
 
-% run global operator
-N = numel(Yxy(:,:,1));
-maxLum = max(max(Yxy(:,:,1)));
+% Calculate some useful stats
+numElements = numel(Yxy(:,:,1));
+maxLuminance = max(max(Yxy(:,:,1)));
+logLuminanceSum = sum(log(reshape(Yxy(:,:,1), [1 numElements] )));
+logAvgLuminance = logLuminanceSum / numElements;
+avgLuminance = exp(logAvgLuminance);
+maxLuminanceW = (maxLuminance / avgLuminance); % Scaled max luminance
 
-logSum = sum(log(reshape(Yxy(:,:,1), [1 N] )));
-logAvgLum = logSum / N;
-avgLum = exp(logAvgLum);
-maxLumW = (maxLum / avgLum);
-
+% This value has worked well
 b = 0.85;
 
-% Bias power function
-bT = (Yxy(:,:,1) ./ maxLumW) .^ ( log(b) / log(0.5) );
+% Bias function
+bT = (Yxy(:,:,1) ./ maxLuminanceW) .^ ( log(b) / log(0.5) );
 
-%replace luminance values
-coeff = (100 * 0.01) / log10(maxLumW + 1);
-Yxy(:,:,1) = Yxy(:,:,1) ./ avgLum;
+% Calculate new luminance values
+coeff = (100 * 0.01) / log10(maxLuminanceW + 1);
+Yxy(:,:,1) = Yxy(:,:,1) ./ avgLuminance;
 Yxy(:,:,1) = ( log(Yxy(:,:,1) + 1) ./ log(2 + bT .* 8) ) .* coeff;
 
-% convert back to RGB
-
-% Yxy to xyz
+% Convert Yxy/xyY to XYZ
 newW = Yxy(:,:,1) ./ Yxy(:,:,3);
 xyz(:,:,2) = Yxy(:,:,1);
 xyz(:,:,1) = newW .* Yxy(:,:,2);
 xyz(:,:,3) = newW -xyz(:,:,1) - xyz(:,:,2);
 
-% arbitrary xyz to rgb conversion
+% XYZ to RGB
 image(:,:,1) = 3.240479 .* xyz(:,:,1) + -1.537150 .* xyz(:,:,2) + -0.498535 .* xyz(:,:,3);
 image(:,:,2) = -0.969256 .* xyz(:,:,1) + 1.875992 .* xyz(:,:,2) + 0.041556 .* xyz(:,:,3);
 image(:,:,3) = 0.055648 .* xyz(:,:,1) + -0.204043 .* xyz(:,:,2) + 1.057311 .* xyz(:,:,3);
@@ -178,7 +170,7 @@ imageDrago = fixGamma(image, 2.7);
 %osäker på om det behövs samplas igen
 % subplot(1,1,1);
 hsv = rgb2hsv(radMap); %transforms the image values
-luminance=intensityMap;
+luminance=luminanceMap;
 chrominance=hsv(:,:,2); %chrominance = saturation channel
 [rows, cols]=size(radMap(:,:,1));
 T=rows*cols; %total amount of pixels
