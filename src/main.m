@@ -223,6 +223,23 @@ imhist(globalToneMappedImage,bincount)
 %imhist(logLum, bincount);
 %imhist(logDisplay,bincount);
 
+%% Another global one
+a = 0.58;
+saturation = 0.7;
+imshow(reinhardGlobal(irradianceR, irradianceG, irradianceB, a, saturation));
+
+%% And a third global one (very simple)
+gamma = 0.2;
+RGB = gammaToneMapping(irradianceR, irradianceG, irradianceB, gamma);
+imshow(RGB)
+
+%% Adaptation of the gamma one to luminance
+gamma = 0.2;
+saturation = 0.4;
+RGB = gammaLuminanceToneMapping(irradianceR, irradianceG, irradianceB, ...
+    gamma, saturation);
+imshow(RGB)
+
 %%
 
 subplot(2,2,1);
