@@ -167,23 +167,7 @@ image(:,:,3) = 0.055648 .* xyz(:,:,1) + -0.204043 .* xyz(:,:,2) + 1.057311 .* xy
 imageDrago = fixGamma(image, 2.7);
 
 %% global tonemapping
-%osäker på om det behövs samplas igen
-% subplot(1,1,1);
-hsv = rgb2hsv(radMap); %transforms the image values
-luminance=luminanceMap;
-chrominance=hsv(:,:,2); %chrominance = saturation channel
-[rows, cols]=size(radMap(:,:,1));
-T=rows*cols; %total amount of pixels
-logLum=log10(luminance);
-deltaB=(max(max(logLum)) - min(min(logLum)) )/100;
-
-displayMin=100; % ?
-displayMax=100000000000000000000000000; % ?
-logdmin=log10(displayMin);
-logdmax=log10(displayMax);
-bincount=100;
-h=imhist(luminance,bincount) / T;
-logDisplay=zeros(size(luminance));
+%global histogram equalization
 
 %cumsum = P(b)
 %for k=1:5:rows
@@ -193,6 +177,19 @@ logDisplay=zeros(size(luminance));
       %  %lumDisDerivative=diff(logDisplay, luminance);
    % end
 %end
+   
+subplot(1,1,1);
+luminance=intensityMap;
+[rows, cols]=size(radmap(:,:,1));
+T=rows*cols; %total amount of pixels
+logLum=log10(luminance);
+bincount=100;
+deltaB=(max(max(logLum)) - min(min(logLum)) )/bincount;
+
+displayMin=100; % arbitrary value
+displayMax=10000; % arbitrary value
+logdmin=log10(displayMin);
+logdmax=log10(displayMax);
 
 fb=imhist(logLum, bincount);
 
@@ -201,27 +198,37 @@ for i=1:1:bincount
             fb(i) = (T*deltaB) / (logdmax - logdmin);
     end
     
-    if fb(i) < displayMin
-            fb(i)=T;
+    if fb(i) < displayMin % didn't find an explanation for what to do in this case
+            fb(i)=T; % guess 1
+            %fb(i) = (T*deltaB) / (logdmax - logdmin); % guess 2
     end
 end
 
-globalToneMappedImage=histeq(luminance,fb);
+globalToneMappedImage=histeq(luminance,fb); %luminance for cathedral & counter but logLum for ball
 %globalToneMappedImage=luminance.*fb;
 %imshow(luminance);
 %imshow(lumDis);
 %imshow(logDisplay);
 %imshow(globalToneMappedImage);
 
-imageGlobal(:,:,1) = globalToneMappedImage .* rScaled.*0.7; % blev för rött så ändrade skalningen
-imageGlobal(:,:,2) = globalToneMappedImage .* gScaled; % Re-apply colors
-imageGlobal(:,:,3) = globalToneMappedImage .* bScaled; % Re-apply colors
-imshow(imageGlobal);
+image=radmap;
+image(:,:,1) = globalToneMappedImage .* rScaled.*0.7; % 0.7 for less red cathedral
+image(:,:,2) = globalToneMappedImage .* gScaled; % re-apply green
+image(:,:,3) = globalToneMappedImage .* bScaled; % Re-apply blue
+imshow(image);
 
+%im(:,:,1)=globalToneMappedImage;
+%im(:,:,1)=labbb(:,:,2);
+%im(:,:,1)=labbb(:,:,3);
+%imshow(im);
+%imwrite(image,'r_0.7.png');
+
+%h=imhist(luminance,bincount) / T;
 %imhist(luminance,bincount)
-imhist(globalToneMappedImage,bincount)
+%imhist(globalToneMappedImage,bincount)
 %imhist(logLum, bincount);
 %imhist(logDisplay,bincount);
+
 
 %% Another global one
 a = 0.58;
